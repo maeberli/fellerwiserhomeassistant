@@ -65,7 +65,7 @@ class FellerWiserApiClient:
         """Get data from the API."""
         return await self._api_wrapper(
             method="get",
-            url="http://" + self._host + "/api/info",
+            url="http://" + self._host + "/api/system/health",
             headers={"authorization": "Bearer " + self._apikey},
         )
 
@@ -110,14 +110,11 @@ class FellerWiserApiClient:
 
         resp_json = await self._api_wrapper(
             method="get",
-            url="http://" + self._host + "/api/info",
+            url="http://" + self._host + "/api/system/health",
             headers={"authorization": "Bearer " + self._apikey},
         )
 
-        LOGGER.error("##################")
-        LOGGER.error(resp_json)
-
-        return True
+        return resp_json["status"] == "success"
 
     def get_host(self) -> str:
         """Host Name of the client."""
