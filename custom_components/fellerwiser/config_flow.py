@@ -1,51 +1,124 @@
 """Config flow for Feller Wiser integration."""
 from __future__ import annotations
 
-import logging
+import socket
 from typing import Any
 
+import asyncio
 import voluptuous as vol
-import requests
+import aiohttp
+import async_timeout
+
 
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import selector
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 
-from .const import DOMAIN
-
-_LOGGER = logging.getLogger(__name__)
+from .const import DOMAIN, LOGGER
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required("host"): selector.TextSelector(
+        vol.Required(
+            "host", default="wiser-00079973.local.aeberli.me"
+        ): selector.TextSelector(
             selector.TextSelectorConfig(type=selector.TextSelectorType.TEXT),
         ),
-        vol.Required("apikey"): selector.TextSelector(
+        vol.Required(
+            "apikey", default="cd87f1b7-777f-4db8-add3-f7302a138912"
+        ): selector.TextSelector(
             selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
         ),
     }
 )
 
 
-class PlaceholderHub:
-    """Placeholder class to make tests pass.
+class FellerWiserApiClientError(Exception):
+    """Exception to indicate a general API error."""
 
-    TODO Remove this placeholder class and replace with things from your PyPI package.
-    """
 
-    def __init__(self, host: str) -> None:
-        """Initialize."""
-        self.host = host
+class FellerWiserApiClientCommunicationError(FellerWiserApiClientError):
+    """Exception to indicate a communication error."""
 
-    async def authenticate(self, apikey: str) -> bool:
+
+class FellerWiserApiClientAuthenticationError(FellerWiserApiClientError):
+    """Exception to indicate an authentication error."""
+
+
+class FellerWiserApiClient:
+    """Sample API Client."""
+
+    def __init__(
+        self,
+        host: str,
+        apikey: str,
+        session: aiohttp.ClientSession,
+    ) -> None:
+        """Sample API Client."""
+        self._host = host
+        self._apikey = apikey
+        self._session = session
+
+    async def async_get_data(self) -> any:
+        """Get data from the API."""
+        return await self._api_wrapper(
+            method="get",
+            url="http://" + self._host + "/api/system/health",
+            headers={"authorization": "Bearer " + self._apikey},
+        )
+
+    async def _api_wrapper(
+        self,
+        method: str,
+        url: str,
+        data: dict | None = None,
+        headers: dict | None = None,
+    ) -> any:
+        """Get information from the API."""
+        try:
+            async with async_timeout.timeout(10):
+                response = await self._session.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    json=data,
+                )
+                if response.status in (401, 403):
+                    raise FellerWiserApiClientAuthenticationError(
+                        "Invalid credentials",
+                    )
+                response.raise_for_status()
+                return await response.json()
+
+        except asyncio.TimeoutError as exception:
+            raise FellerWiserApiClientCommunicationError(
+                "Timeout error fetching information",
+            ) from exception
+        except (aiohttp.ClientError, socket.gaierror) as exception:
+            raise FellerWiserApiClientCommunicationError(
+                "Error fetching information",
+            ) from exception
+        except Exception as exception:  # pylint: disable=broad-except
+            raise FellerWiserApiClientError(
+                "Something really wrong happened!"
+            ) from exception
+
+    async def authenticated(self) -> bool:
         """Test if we can authenticate with the host."""
-        self.apikey = apikey
 
-        resp = requests.get("http://"+self.host+"/api/info", headers= {'authorization':'Bearer ' + self.apikey})
-        
-        return resp.status_code == 200
+        resp_json = await self._api_wrapper(
+            method="get",
+            url="http://" + self._host + "/api/system/health",
+            headers={"authorization": "Bearer " + self._apikey},
+        )
+
+        return resp_json["status"] == "success"
+
+    def get_host(self) -> str:
+        """Host Name of the client."""
+        return self._host
 
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
@@ -61,9 +134,11 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     #     your_validate_func, data["username"], data["password"]
     # )
 
-    hub = PlaceholderHub(data["host"])
+    client = FellerWiserApiClient(
+        data["host"], data["apikey"], session=async_create_clientsession(hass)
+    )
 
-    if not await hub.authenticate(data["apikey"]):
+    if not await client.authenticated():
         raise InvalidAuth
 
     # If you cannot connect:
@@ -72,7 +147,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     # InvalidAuth
 
     # Return info that you want to store in the config entry.
-    return {"title": "New Device Registered with Host " + hub.host}
+    return {"title": "Registered Host " + client.get_host()}
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -98,7 +173,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         except InvalidAuth:
             errors["base"] = "invalid_auth"
         except Exception:  # pylint: disable=broad-except
-            _LOGGER.exception("Unexpected exception")
+            LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
         else:
             return self.async_create_entry(title=info["title"], data=user_input)

@@ -16,7 +16,7 @@ import voluptuous as vol
 # Import the device class from the component that you want to support
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components.light import (ATTR_BRIGHTNESS, PLATFORM_SCHEMA,
-                                            LightEntity)
+                                            LightEntity, ColorMode)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -135,7 +135,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     lights= []
     for value in loads["data"]:
-        if value["type"] == "dim":
+        if value["type"] in ["dim", "dali"]:
             lights.append(FellerLight(value, host, apikey))
         if value["type"] == "onoff":
             lights.append(FellerLight(value, host, apikey))
@@ -192,14 +192,14 @@ class FellerLight(LightEntity):
     @property
     def color_mode(self) -> str | None:
         if self._type == "onoff":
-            return "onoff"
-        return "brightness"
+            return ColorMode.ONOFF
+        return ColorMode.BRIGHTNESS
 
     @property
     def supported_color_modes(self) -> set | None:
         if self._type == "onoff":
-            return {"onoff"}
-        return {"brightness"}
+            return { ColorMode.ONOFF }
+        return { ColorMode.BRIGHTNESS }
 
 
     def turn_on(self, **kwargs: Any) -> None:
