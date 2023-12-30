@@ -30,4 +30,4 @@ jobs:
       - run: pipenv install
 
       - name: "Run"
-        run: python3 -m ruff check .
+        run: pipenf run ruff check .
