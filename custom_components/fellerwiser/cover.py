@@ -1,3 +1,4 @@
+"""Module which implements the integration of Wiser Blinds/Covers into Home assistant."""
 from __future__ import annotations
 
 import logging
@@ -16,6 +17,7 @@ from homeassistant.components.cover import (ATTR_POSITION, CoverEntity)
 _LOGGER = logging.getLogger(__name__)
 
 async def hello(covers, hass, host, apikey):
+    """Instantiate an endless loop to get updates from cover blind state."""
     ip = host
 
     while True:
@@ -33,17 +35,17 @@ async def hello(covers, hass, host, apikey):
                             await asyncio.wait_for(pong, timeout=None)
                             _LOGGER.info('Ping OK, keeping connection alive...')
                             continue
-                        except:
+                        except:  # noqa: E722
                             _LOGGER.info(
                                 f'Ping error - retrying connection in {10} sec (Ctrl-C to quit)')
                             await asyncio.sleep(10)
                             break
                     _LOGGER.info(f'Server said > {result}')
                     data = json.loads(result)
-                    for l in covers:
-                        if l.unique_id == "cover-"+str(data["load"]["id"]):
+                    for cover in covers:
+                        if cover.unique_id == "cover-"+str(data["load"]["id"]):
                             _LOGGER.info("found entity to update")
-                            l.updateExternal(data["load"]["state"]["level"], data["load"]["state"]["moving"])
+                            cover.updateExternal(data["load"]["state"]["level"], data["load"]["state"]["moving"])
         except socket.gaierror:
             _LOGGER.info(
                 f'Socket error - retrying connection in {10} sec (Ctrl-C to quit)')
@@ -59,12 +61,14 @@ async def hello(covers, hass, host, apikey):
             continue
 
 def updatedata(host, apikey):
+    """Request all Loads from the Feller Wiser Gateway."""
     #ip = "192.168.0.18"
     ip = host
     key = apikey
     return requests.get("http://"+ip+"/api/loads", headers= {'authorization':'Bearer ' + key})
 
 async def async_setup_entry(hass, entry, async_add_entities):
+    """Initialize the FellerCover Entities in HomeAssistant."""
     host = entry.data['host']
     apikey = entry.data['apikey']
 
@@ -84,8 +88,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
 
 class FellerCover(CoverEntity):
+    """HomeAssistant Entity representing a Feller Wiser Blind/Cover Load."""
 
     def __init__(self, data, host, apikey) -> None:
+        """Initialize the FelleCover Entity."""
         self._data = data
         self._name = data["name"]
         self._id = str(data["id"])
@@ -98,33 +104,41 @@ class FellerCover(CoverEntity):
 
     @property
     def name(self) -> str:
+        """Return the Name of the Entity."""
         return self._name
 
     @property
     def unique_id(self):
-        return "cover-" + self._id
+        """Return the Unique ID of the entity."""
+        return "feller-wiser-cover-" + self._id
 
     @property
     def current_cover_position(self):
+        """Returns the current Cover Position 0-100."""
         return self._position
 
     @property
     def is_opening(self) -> bool | None:
+        """Returns true if the cover is actually in motion and opening."""
         return self._is_opening
 
     @property
     def is_closing(self) -> bool | None:
+        """Returns true if the cover is acutally in motion state and closing."""
         return self._is_closing
 
     @property
     def is_closed(self) -> bool | None:
+        """Return the state if the Cover is closed or not."""
         return self._is_closed
 
     @property
     def should_poll(self) -> bool | None:
+        """Shouldn't poll."""
         return False
 
-    def open_cover(self, **kwargs: Any) -> None:
+    def open_cover(self, **kwargs: Any) -> None:  # noqa: F821
+        """Ope the Cover completly by acting on the Feller Gateway."""
         self._position = kwargs.get(ATTR_POSITION, 100)
         ip = self._host
         response = requests.put("http://"+ip+"/api/loads/"+self._id+"/target_state", headers= {'authorization':'Bearer ' + self._apikey}, json={'level': 0})
@@ -132,7 +146,8 @@ class FellerCover(CoverEntity):
         self._state = True
         self._position = 100-(response.json()["data"]["target_state"]["level"]/100)
 
-    def close_cover(self, **kwargs: Any) -> None:
+    def close_cover(self, **kwargs: Any) -> None:  # noqa: F821
+        """Close the Cover completly, by acting on the Feller Gateway."""
         self._position = kwargs.get(ATTR_POSITION, 100)
         ip = self._host
         response = requests.put("http://"+ip+"/api/loads/"+self._id+"/target_state", headers= {'authorization':'Bearer ' + self._apikey}, json={'level': 10000})
@@ -140,7 +155,8 @@ class FellerCover(CoverEntity):
         self._state = True
         self._position = 100-(response.json()["data"]["target_state"]["level"]/100)
 
-    def set_cover_position(self, **kwargs: Any) -> None:
+    def set_cover_position(self, **kwargs: Any) -> None:  # noqa: F821
+        """Set the real Cover Position by acting on the Wiser Gateway."""
         self._position = kwargs.get(ATTR_POSITION, 100)
         ip = self._host
         response = requests.put("http://"+ip+"/api/loads/"+self._id+"/target_state", headers= {'authorization':'Bearer ' + self._apikey}, json={'level': (100-self._position)*100})
@@ -148,19 +164,22 @@ class FellerCover(CoverEntity):
         self._state = True
         self._position = 100-(response.json()["data"]["target_state"]["level"]/100)
 
-    def stop_cover(self, **kwargs: Any) -> None:
+    def stop_cover(self, **kwargs: Any) -> None:  # noqa: F821
+        """Stop the Cover motion by calling the Wiser Gateway."""
         ip = self._host
         response = requests.put("http://"+ip+"/api/loads/"+self._id+"/ctrl", headers= {'authorization':'Bearer ' + self._apikey}, json={'button': "stop", 'event': 'click'})
         _LOGGER.info(response.json())
 
 
     def updatestate(self):
+        """Load latest values of all loads from the wiser Gateway."""
         ip = self._host
         # _LOGGER.info("requesting http://"+ip+"/api/loads/"+self._id)
         return requests.get("http://"+ip+"/api/loads/"+self._id, headers= {'authorization':'Bearer ' + self._apikey})
 
 
     def update(self) -> None:
+        """Load latest state from Wiser Gateway and update internal values."""
         response = self.updatestate()
         load = response.json()
         _LOGGER.info(load)
@@ -185,6 +204,7 @@ class FellerCover(CoverEntity):
             self._is_closed = False
 
     def updateExternal(self, position, moving):
+        """Update internal state based on external inputs."""
         self._position = 100-(position/100)
 
         if moving == "stop":

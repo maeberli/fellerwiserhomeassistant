@@ -17,25 +17,17 @@ jobs:
         uses: "actions/checkout@v4.1.0"
 
       - name: "Set up Python"
-        uses: actions/setup-python@v4.7.1
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
+          cache: "pipenv"
+          cache-dependency-path: |
+            ./Pipfile.lock
 
       - name: Install pipenv
-        run: |
-          python -m pip install --upgrade pipenv wheel
-
-      - id: cache-pipenv
-        uses: actions/cache@v1
-        with:
-          path: ~/.local/share/virtualenvs
-          key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
-
-      - name: Install dependencies
-        if: steps.cache-pipenv.outputs.cache-hit != 'true'
-        run: |
-          pipenv install --deploy --dev
+        run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
+        
+      - run: pipenv install
 
       - name: "Run"
-        run: python3 -m ruff check .
+        run: pipenv run ruff check .

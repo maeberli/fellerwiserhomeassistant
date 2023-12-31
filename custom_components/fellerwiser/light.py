@@ -29,6 +29,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 
 
 async def hello(lights, hass, host, apikey):
+    """Open an endless loop, register on Websocket and get Updates."""
     ip = host
 
     while True:
@@ -46,7 +47,7 @@ async def hello(lights, hass, host, apikey):
                             await asyncio.wait_for(pong, timeout=None)
                             _LOGGER.info('Ping OK, keeping connection alive...')
                             continue
-                        except:
+                        except:  # noqa: E722
                             _LOGGER.info(
                                 f'Ping error - retrying connection in {10} sec (Ctrl-C to quit)')
                             await asyncio.sleep(10)
@@ -66,10 +67,10 @@ async def hello(lights, hass, host, apikey):
                     else:
                         doUpdate = True
                     if doUpdate:
-                        for l in lights:
-                            if l.unique_id == "light-"+str(data["load"]["id"]):
+                        for light in lights:
+                            if light.unique_id == "light-"+str(data["load"]["id"]):
                                 _LOGGER.info("found entity to update")
-                                l.updateExternal(data["load"]["state"]["bri"])
+                                light.updateExternal(data["load"]["state"]["bri"])
         except socket.gaierror:
             _LOGGER.info(
                 f'Socket error - retrying connection in {10} sec (Ctrl-C to quit)')
@@ -108,15 +109,16 @@ async def hello(lights, hass, host, apikey):
             else:
                 doUpdate = True
             if doUpdate:
-                for l in lights:
-                    if l.unique_id == "light-"+str(data["load"]["id"]):
+                for light in lights:
+                    if light.unique_id == "light-"+str(data["load"]["id"]):
                         _LOGGER.info("found entity to update")
-                        l.updateExternal(data["load"]["state"]["bri"])
+                        light.updateExternal(data["load"]["state"]["bri"])
 
 
         ws.close()
 
 def updatedata(host, apikey):
+    """Return the loads of the Wiser Gateway."""
     #ip = "192.168.0.18"
     ip = host
     key = apikey
@@ -124,6 +126,7 @@ def updatedata(host, apikey):
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
+    """Setups Feller Wiser light Entities in HA and trigger Update through WS."""
     host = entry.data['host']
     apikey = entry.data['apikey']
 
@@ -169,7 +172,8 @@ class FellerLight(LightEntity):
 
     @property
     def unique_id(self):
-        return "light-" + self._id
+        """Return unique ID of Feller Wiser Light."""
+        return "feller-wiser-light-" + self._id
 
     @property
     def brightness(self):
@@ -187,22 +191,23 @@ class FellerLight(LightEntity):
 
     @property
     def should_poll(self) -> bool | None:
+        """Shouldn't poll."""
         return False
 
     @property
     def color_mode(self) -> str | None:
+        """Return the active Color Mode of the Wiser Light."""
         if self._type == "onoff":
             return ColorMode.ONOFF
         return ColorMode.BRIGHTNESS
 
     @property
     def supported_color_modes(self) -> set | None:
-        if self._type == "onoff":
-            return { ColorMode.ONOFF }
-        return { ColorMode.BRIGHTNESS }
+        """Return ths tsupport ColorModes of the light Entity."""
+        return self.color_mode
 
 
-    def turn_on(self, **kwargs: Any) -> None:
+    def turn_on(self, **kwargs: Any) -> None:  # noqa: F821
         """Instruct the light to turn on.
 
         You can skip the brightness part if your light does not support
@@ -221,7 +226,7 @@ class FellerLight(LightEntity):
         self._brightness = response.json()["data"]["target_state"]["bri"]/39.22
 
 
-    def turn_off(self, **kwargs: Any) -> None:
+    def turn_off(self, **kwargs: Any) -> None:  # noqa: F821
         """Instruct the light to turn off."""
         ip = self._host
         response = requests.put("http://"+ip+"/api/loads/"+self._id+"/target_state", headers= {'authorization':'Bearer ' + self._apikey}, json={'bri': 0})
@@ -231,6 +236,7 @@ class FellerLight(LightEntity):
         self._brightness = response.json()["data"]["target_state"]["bri"]/39.22
 
     def updatestate(self):
+        """Return the load of the Feller Wiser Gateway."""
         ip = self._host
         # _LOGGER.info("requesting http://"+ip+"/api/loads/"+self._id)
         return requests.get("http://"+ip+"/api/loads/"+self._id, headers= {'authorization':'Bearer ' + self._apikey})
@@ -255,6 +261,7 @@ class FellerLight(LightEntity):
         self._brightness = load["data"]["state"]["bri"]/39.22
 
     def updateExternal(self, brightness):
+        """Calculate the Brightness for Home Assistnat and schedule HA State update."""
         self._brightness = brightness/39.22
         if self._brightness > 0:
             self._state = True

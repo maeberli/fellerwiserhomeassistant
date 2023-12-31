@@ -59,7 +59,7 @@ class FellerScene(Scene):
         """Return the unique id of this Scene."""
         return "feller-wiser-scene-" + self._id
 
-    def activate(self, **kwargs: Any) -> None:
+    def activate(self, **kwargs: Any) -> None:  # noqa: F821
         """Activate scene. Try to get entities into requested state."""
         _LOGGER.debug(f"Activate Feller Scene with id > {self._id}")
         requests.get(
@@ -68,7 +68,7 @@ class FellerScene(Scene):
         )
         return None
 
-    async def async_activate(self, **kwargs: Any) -> None:
+    async def async_activate(self, **kwargs: Any) -> None:  # noqa: F821
         """Activate scene. Try to get entities into requested state."""
         _LOGGER.debug(f"Async Activate Feller Scene with id > {self._id}")
         await self.hass.async_add_executor_job(self.activate)
