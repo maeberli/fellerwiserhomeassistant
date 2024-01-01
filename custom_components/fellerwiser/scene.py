@@ -4,6 +4,7 @@ from homeassistant.components.scene import Scene
 
 import logging
 import requests
+from typing import Any
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class FellerScene(Scene):
         """Return the unique id of this Scene."""
         return "feller-wiser-scene-" + self._id
 
-    def activate(self, **kwargs: Any) -> None:  # noqa: F821
+    def activate(self, **kwargs: Any) -> None:
         """Activate scene. Try to get entities into requested state."""
         _LOGGER.debug(f"Activate Feller Scene with id > {self._id}")
         requests.get(
@@ -68,7 +69,7 @@ class FellerScene(Scene):
         )
         return None
 
-    async def async_activate(self, **kwargs: Any) -> None:  # noqa: F821
+    async def async_activate(self, **kwargs: Any) -> None:
         """Activate scene. Try to get entities into requested state."""
         _LOGGER.debug(f"Async Activate Feller Scene with id > {self._id}")
         await self.hass.async_add_executor_job(self.activate)
