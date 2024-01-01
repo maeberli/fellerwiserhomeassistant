@@ -10,6 +10,8 @@ pytest-aiohttp = "*"
 pytest-asyncio = "*"
 homeassistant = "*"
 ruff = "*"
+pytest = "*"
+pytest-cov = "*"
 
 [requires]
 python_version = "3.11"
