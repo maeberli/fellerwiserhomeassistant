@@ -4,10 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-homeassistant = "*"
-ruff = "*"
 
 [dev-packages]
+pytest-aiohttp = "*"
+pytest-asyncio = "*"
+homeassistant = "*"
+ruff = "*"
 
 [requires]
 python_version = "3.11"
