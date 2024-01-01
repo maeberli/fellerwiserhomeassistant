@@ -30,4 +30,4 @@ jobs:
       - run: pipenv install --dev
 
       - name: "Run"
-        run: pipenv run ruff check .
+        run: pipenv run pytest
