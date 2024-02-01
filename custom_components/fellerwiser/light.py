@@ -8,9 +8,7 @@ import websockets
 import asyncio
 import json
 import socket
-
-
-
+from typing import Any
 import voluptuous as vol
 
 # Import the device class from the component that you want to support
@@ -166,7 +164,7 @@ class FellerLight(LightEntity):
         self._type = data["type"]
 
     @property
-    def name(self) -> str:
+    def type(self) -> str:
         """Return the display name of this light."""
         return self._name
 
@@ -207,7 +205,7 @@ class FellerLight(LightEntity):
         return self.color_mode
 
 
-    def turn_on(self, **kwargs: Any) -> None:  # noqa: F821
+    def turn_on(self, **kwargs: Any) -> None:
         """Instruct the light to turn on.
 
         You can skip the brightness part if your light does not support
@@ -226,7 +224,7 @@ class FellerLight(LightEntity):
         self._brightness = response.json()["data"]["target_state"]["bri"]/39.22
 
 
-    def turn_off(self, **kwargs: Any) -> None:  # noqa: F821
+    def turn_off(self, **kwargs: Any) -> None:
         """Instruct the light to turn off."""
         ip = self._host
         response = requests.put("http://"+ip+"/api/loads/"+self._id+"/target_state", headers= {'authorization':'Bearer ' + self._apikey}, json={'bri': 0})

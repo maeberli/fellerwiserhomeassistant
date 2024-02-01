@@ -8,6 +8,7 @@ import websockets
 import asyncio
 import json
 import socket
+from typing import Any
 
 
 
@@ -137,7 +138,7 @@ class FellerCover(CoverEntity):
         """Shouldn't poll."""
         return False
 
-    def open_cover(self, **kwargs: Any) -> None:  # noqa: F821
+    def open_cover(self, **kwargs: Any) -> None:
         """Ope the Cover completly by acting on the Feller Gateway."""
         self._position = kwargs.get(ATTR_POSITION, 100)
         ip = self._host
@@ -146,7 +147,7 @@ class FellerCover(CoverEntity):
         self._state = True
         self._position = 100-(response.json()["data"]["target_state"]["level"]/100)
 
-    def close_cover(self, **kwargs: Any) -> None:  # noqa: F821
+    def close_cover(self, **kwargs: Any) -> None:
         """Close the Cover completly, by acting on the Feller Gateway."""
         self._position = kwargs.get(ATTR_POSITION, 100)
         ip = self._host
@@ -155,7 +156,7 @@ class FellerCover(CoverEntity):
         self._state = True
         self._position = 100-(response.json()["data"]["target_state"]["level"]/100)
 
-    def set_cover_position(self, **kwargs: Any) -> None:  # noqa: F821
+    def set_cover_position(self, **kwargs: Any) -> None:
         """Set the real Cover Position by acting on the Wiser Gateway."""
         self._position = kwargs.get(ATTR_POSITION, 100)
         ip = self._host
@@ -164,7 +165,7 @@ class FellerCover(CoverEntity):
         self._state = True
         self._position = 100-(response.json()["data"]["target_state"]["level"]/100)
 
-    def stop_cover(self, **kwargs: Any) -> None:  # noqa: F821
+    def stop_cover(self, **kwargs: Any) -> None:
         """Stop the Cover motion by calling the Wiser Gateway."""
         ip = self._host
         response = requests.put("http://"+ip+"/api/loads/"+self._id+"/ctrl", headers= {'authorization':'Bearer ' + self._apikey}, json={'button': "stop", 'event': 'click'})
