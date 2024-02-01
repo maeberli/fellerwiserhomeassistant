@@ -35,21 +35,21 @@ def _create_app():
 
 @pytest.fixture
 @pytest.mark.asyncio
-async def auth_fixture(aiohttp_client):
+async def _auth_fixture(aiohttp_client):
     client = await aiohttp_client(_create_app())
     auth = Auth(client.session, client.make_url(""), constants.AUTH_TOKEN)
     return auth
 
 @pytest.mark.asyncio
-async def test_auth_token(auth_fixture):
+async def test_auth_token(_auth_fixture):
     """Test authentication token by invoking call on root."""
-    resp = await (await auth_fixture).request("GET", "")
+    resp = await (await _auth_fixture).request("GET", "")
     assert await resp.json() == {"Success": True}
 
 @pytest.mark.asyncio
-async def test_request(auth_fixture):
+async def test_request(_auth_fixture):
     """Test authentication token by invoking call on root."""
-    auth = await auth_fixture
+    auth = await _auth_fixture
     resp = await auth.request("GET", "hello")
     assert await resp.json() == {"hello": "world"}
 

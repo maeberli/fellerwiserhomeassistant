@@ -1,8 +1,6 @@
 """Test the Scene Class."""
-from fellerwiser.fellerwiserapi.auth import Auth
 from fellerwiser.fellerwiserapi.job import Job
 
-from . import constants
 
 from aiohttp import web
 import pytest
@@ -44,13 +42,6 @@ def _create_app():
     app.router.add_route("GET", "/jobs", _get_api_jobs)
     app.router.add_route("GET", "/jobs/7", _get_api_jobs_id)
     return app
-
-@pytest.fixture
-@pytest.mark.asyncio
-async def auth_fixture(aiohttp_client):
-    client = await aiohttp_client(_create_app())
-    auth = Auth(client.session, client.make_url(""), constants.AUTH_TOKEN)
-    return auth
 
 
 @pytest.mark.asyncio

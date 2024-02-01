@@ -61,15 +61,15 @@ def _create_app():
 
 @pytest.fixture
 @pytest.mark.asyncio
-async def auth_fixture(aiohttp_client):
+async def _auth_fixture(aiohttp_client):
     client = await aiohttp_client(_create_app())
     auth = Auth(client.session, client.make_url(""), constants.AUTH_TOKEN)
     return auth
 
 @pytest.mark.asyncio
-async def test_init(auth_fixture):
+async def test_init(_auth_fixture):
     """Test the Load Constructor."""
-    load = Load(_raw_data1, await auth_fixture)
+    load = Load(_raw_data1, await _auth_fixture)
 
     assert load.name == "00005341_0"
     assert load.id == "14"
@@ -78,9 +78,9 @@ async def test_init(auth_fixture):
     assert load.raw_state is None
 
 @pytest.mark.asyncio
-async def test_async_update(auth_fixture):
+async def test_async_update(_auth_fixture):
     """Test the Load Constructor."""
-    load = Load(_raw_data1, await auth_fixture)
+    load = Load(_raw_data1, await _auth_fixture)
 
     await load.async_update()
 
@@ -91,8 +91,8 @@ async def test_async_update(auth_fixture):
 
 
 @pytest.mark.asyncio
-async def test_async_set_target_state(auth_fixture):
+async def test_async_set_target_state(_auth_fixture):
     """Test the Load Constructor."""
-    load = Load(_raw_data1, await auth_fixture)
+    load = Load(_raw_data1, await _auth_fixture)
 
     await load.async_set_target_state({"bri": 500})
