@@ -1,13 +1,16 @@
-"""Test the Load Class."""
+"""Test the Job Class."""
 from fellerwiser.fellerwiserapi.auth import Auth
 from fellerwiser.fellerwiserapi.load import Load
 
+from . import constants
+
 from aiohttp import web
-import aiohttp
 import pytest
 import json
+import logging
 
-_auth_token = "TOKEN"
+LOGGER = logging.getLogger(__name__)
+
 _raw_data1 = {
     "name": "00005341_0",
     "device": "00005341",
@@ -56,13 +59,17 @@ def _create_app():
     )
     return app
 
+@pytest.fixture
+@pytest.mark.asyncio
+async def auth_fixture(aiohttp_client):
+    client = await aiohttp_client(_create_app())
+    auth = Auth(client.session, client.make_url(""), constants.AUTH_TOKEN)
+    return auth
 
 @pytest.mark.asyncio
-async def test_init():
+async def test_init(auth_fixture):
     """Test the Load Constructor."""
-    async with aiohttp.ClientSession() as session:
-        auth = Auth(session, "HOST", "AUTH_TOKEN")
-        load = Load(_raw_data1, auth)
+    load = Load(_raw_data1, await auth_fixture)
 
     assert load.name == "00005341_0"
     assert load.id == "14"
@@ -70,13 +77,10 @@ async def test_init():
     assert load.unused is False
     assert load.raw_state is None
 
-
 @pytest.mark.asyncio
-async def test_async_update(aiohttp_client):
+async def test_async_update(auth_fixture):
     """Test the Load Constructor."""
-    client = await aiohttp_client(_create_app())
-    auth = Auth(client.session, client.make_url(""), _auth_token)
-    load = Load(_raw_data1, auth)
+    load = Load(_raw_data1, await auth_fixture)
 
     await load.async_update()
 
@@ -87,10 +91,8 @@ async def test_async_update(aiohttp_client):
 
 
 @pytest.mark.asyncio
-async def test_async_set_target_state(aiohttp_client):
+async def test_async_set_target_state(auth_fixture):
     """Test the Load Constructor."""
-    client = await aiohttp_client(_create_app())
-    auth = Auth(client.session, client.make_url(""), _auth_token)
-    load = Load(_raw_data1, auth)
+    load = Load(_raw_data1, await auth_fixture)
 
     await load.async_set_target_state({"bri": 500})

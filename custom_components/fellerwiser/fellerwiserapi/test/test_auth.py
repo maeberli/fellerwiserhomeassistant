@@ -1,6 +1,8 @@
 """Test the Auth Class."""
 from fellerwiser.fellerwiserapi.auth import Auth
 
+from . import constants
+
 import aiohttp
 import pytest
 import logging
@@ -10,14 +12,13 @@ from aiohttp import web
 
 LOGGER = logging.getLogger(__name__)
 
-_auth_token = "TOKEN"
 
 async def _get_api_root(request: aiohttp.web.Request):
-    assert request.headers["authorization"] == "Bearer TOKEN"
+    assert request.headers["authorization"] == f"Bearer {constants.AUTH_TOKEN}"
     return web.Response(text='{"Success": true}', content_type='application/json')
 
 async def _get_api_hello(request: aiohttp.web.Request):
-    assert request.headers["authorization"] == "Bearer TOKEN"
+    assert request.headers["authorization"] == f"Bearer {constants.AUTH_TOKEN}"
     return web.Response(text='{"hello": "world"}', content_type='application/json')
 
 async def _get_api_hello_world(request: aiohttp.web.Request):
@@ -32,20 +33,23 @@ def _create_app():
     return app
 
 
+@pytest.fixture
 @pytest.mark.asyncio
-async def test_auth_token(aiohttp_client):
-    """Test authentication token by invoking call on root."""
+async def auth_fixture(aiohttp_client):
     client = await aiohttp_client(_create_app())
-    auth = Auth(client.session, client.make_url(""), _auth_token)
-    resp = await auth.request("GET", "")
+    auth = Auth(client.session, client.make_url(""), constants.AUTH_TOKEN)
+    return auth
+
+@pytest.mark.asyncio
+async def test_auth_token(auth_fixture):
+    """Test authentication token by invoking call on root."""
+    resp = await (await auth_fixture).request("GET", "")
     assert await resp.json() == {"Success": True}
 
 @pytest.mark.asyncio
-async def test_request(aiohttp_client):
+async def test_request(auth_fixture):
     """Test authentication token by invoking call on root."""
-    client = await aiohttp_client(_create_app())
-    auth = Auth(client.session, client.make_url(""), _auth_token)
-
+    auth = await auth_fixture
     resp = await auth.request("GET", "hello")
     assert await resp.json() == {"hello": "world"}
 
